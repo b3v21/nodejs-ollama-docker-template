@@ -1,0 +1,77 @@
+services:
+  app:
+    container_name: "app"
+    command: sleep infinity
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ..:/home/node/work
+    ports:
+      - "3000:3000"
+    depends_on:
+      - psql
+      - ollama
+      - ollama-webui
+    user: "node"
+
+  psql:
+    container_name: "psql"
+    image: postgres
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: db
+    volumes:
+      - psql:/var/lib/postgresql
+    ports:
+      - "5432:5432"
+    restart: always
+
+  ollama:
+    build:
+      context: ./ollama
+      dockerfile: Dockerfile
+    ports:
+      - 7869:11434
+    volumes:
+      - ../ollama:/root/.ollama
+    container_name: ollama
+    pull_policy: always
+    tty: true
+    restart: always
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+      - OLLAMA_HOST=0.0.0.0
+    networks:
+      - ollama-docker
+
+  ollama-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: ollama-webui
+    volumes:
+      - ../ollama-ui:/app/backend/data
+    depends_on:
+      - ollama
+    ports:
+      - 8080:8080
+    environment: # https://docs.openwebui.com/getting-started/env-configuration#default_models
+      - OLLAMA_BASE_URLS=http://host.docker.internal:7869 #comma separated ollama hosts
+      - ENV=dev
+      - WEBUI_AUTH=False
+      - WEBUI_NAME=valiantlynx AI
+      - WEBUI_URL=http://localhost:8080
+      - WEBUI_SECRET_KEY=t0p-s3cr3t
+      - NO_PROXY=host.docker.internal
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    restart: unless-stopped
+    networks:
+      - ollama-docker
+
+volumes:
+  psql:
+
+networks:
+  ollama-docker:
+    external: false
