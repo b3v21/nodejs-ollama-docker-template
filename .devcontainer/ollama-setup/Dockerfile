@@ -1,6 +1,9 @@
 FROM ollama/ollama:latest
 
-COPY ollama.sh /ollama.sh
-RUN chmod +x /ollama.sh
+RUN ollama serve & \
+    sleep 5 && \
+    ollama pull llama3.1:8b && \
+    pkill ollama
 
-ENTRYPOINT [ "/ollama.sh" ]
+EXPOSE 11434
+CMD ["serve"]
